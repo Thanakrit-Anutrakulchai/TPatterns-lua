@@ -49,7 +49,8 @@
     
       ***IMPORTANT: match will fail on a table if the array parts of a case and the object have different length!
            HOWEVER!> IT WILL NOT FAIL IF THERE ARE LESS KEYS IN THE *CASE* THAN IN THE *OBJECT*
-                      Use match_all if all keys must match! (This is so you don't have to match every single key in a complex object.)
+                      Use match_all if all keys must match! (This is so you don't have to match every single key 
+                                                             in a complex object.)
     
     
     match_all: match_all (obj) { case(c1) - str, case(c2) - function(hash) ... end }
@@ -143,9 +144,10 @@
         local append;
         append = match_all_nomt { 
                           case( mempty, var'ys' ) - 'ys',
-                          case({head = var'x', tail = var'xs'}, var'ys') - function(t) return cons(t.x, append(t.xs, t.ys)) end 
+                          case({head = var'x', tail = var'xs'}, var'ys') - 
+                            function(t) return cons(t.x, append(t.xs, t.ys)) end 
                         }
                         
-         defines a function `append` that takes two lists of the form { head = value, tail = restOfList } where mempty = empty list
-         and concatenates them together.
+         defines a function `append` that takes two lists of the form { head = value, tail = restOfList } 
+           where mempty = empty list, and concatenates them together.
          
