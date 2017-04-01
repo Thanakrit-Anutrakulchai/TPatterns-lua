@@ -91,7 +91,7 @@
       Thus, checkSize and checkMt checks the size(in terms of keys) and metatable of a, b and ALL tables
       in them AND returns true for values of any other type (else matching will fail on those types)
     
-    --more examples in 'test.lua' and 'examples.lua'
+   --more examples in 'test.lua' and 'examples.lua'
     
     
     local T = require 'TPatterns'
@@ -132,7 +132,7 @@
           { case(pair(var'x', var'y')) - call(function(a, b, c) return a + b + c end, var'x', var'y', 5),
             case(pair(4, var'z')) - DO('double(z)',{double = function(x) return x*2 end} ) }
             returns 16
-            
+   -------------------------------------------------------------------------------------------------------------------------
         They can be used as switch statements e.g.
           match (value) {
                           case(5) - ... ,
