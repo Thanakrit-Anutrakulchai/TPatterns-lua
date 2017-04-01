@@ -91,8 +91,9 @@
       Thus, checkSize and checkMt checks the size(in terms of keys) and metatable of a, b and ALL tables
       in them AND returns true for values of any other type (else matching will fail on those types)
     
-  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     --more examples in 'test.lua' and 'examples.lua'
+    
+    
     local T = require 'TPatterns'
     local case, match, var, match_cond, match_all = T.case, T.match, T.var, T.match_cond, T.match_all
     local call, DO, match_nomt, match_all_nomt = T.call, T.DO, T.match_nomt, T.match_all_nomt
