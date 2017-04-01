@@ -45,6 +45,3 @@ assert( tail(testList) == testList.tail )
 assert( tail(mempty) == 'Throw Error Here' )
 
 print(append( testList, testList2 ))
-
--- Using match_cond to implement match_str
---    match_str "The 7 flying birds are 5 feet high." { case'The (%d) flying birds are (%d) feet (%a+).' }
