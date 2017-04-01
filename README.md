@@ -42,7 +42,7 @@
       the hash with-in str or fn *shouldn't* affect the values (unless if it's a reference e.g. to a table).
     > if obj has a metatable, the cases will not match if they have a different one (or none at all).
     > *the metatable's __eq field is, however, ignored. its __index field is also ignored.
-    > position of arguments don't matter e.g. match { cases } (obj) works
+    > positions of arguments don't matter e.g. match { cases } (obj) works
     > match (o1, o2, ...) { cases } is "syntatic sugar" for match {o1, o2, ...}  { cases }
         e.g. case{o1, o2, ...} will match, as well as case(o1, o2, ...)   
         cases must still be in an array. ( case1, case2, ... ) will not work.
