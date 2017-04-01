@@ -1,6 +1,15 @@
 # TPatterns-lua
      Pattern matching on tables like in functional programming, in Lua
  
+   NOTE: I realized too late that there was already a module that does something very similar 
+     to this called tamale, by silentbicycle. There was no intent in copying his work,
+     we both simply used the same method (unification). That being said, the end products are quite
+     different, and not only syntax-wise. tamale has more functionality right off the bat
+     with a slightly bigger footprint, although TPatterns provides enough primitives to build
+     more functionalities.
+     
+   
+   
    ****THIS MODULE CURRENTLY SUPPORTS LUA 5.1 ONLY!
     A module that brings pattern matching from functional programming languages into Lua's tables.
     This module relies heavily on (one-sided) unification. This file refers to a 'substitution hash'
