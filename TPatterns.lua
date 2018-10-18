@@ -132,47 +132,92 @@ local varMT = {__tostring = function(self) return '$('..self.name..')' end}
 -- [ FUNCTIONS ]
 isVar = function(x) return gm(x) == varMT end --forward declared
 
-local function var(name)
+--Create a custom "variable" with the given name
+local function var(name) 
   return sm({name = name}, varMT)
 end
 
+-- Look up the ultimate value of v in subst
+-- i.e. return subst[v.name] or subst[subst[v.name]] or ... 
+--      until it reaches a value or a free variable z such that subst[z.name] is nil
 function walk(v, subst) --forward declared
-  if not isVar(v) then return v
+  if not isVar(v) then 
+    return v
   else 
     local res = walk(subst[v.name], subst) 
-    return (res~=nil and res) or v
+                                   
+    -- returns the end result of the look-up chain, whether it's a variable or value
+    return (res~=nil and res) or v 
   end
 end
 
+  
+-- Helper function. Look at 'unify(case, obj, constraint)' below
 local function unify_helper(x, y, subst, constraint)
   assert(not isVar(y), 'match> There can only be variables in the Cases!')
+                                
+  -- Look up the value or free variable ultimately associated with x in subst
   local u = walk(x, subst)
+                               
+  -- Check constraint given                              
   if not constraint(y, u, subst) then return nil end
+                                
+  -- With "_", always passes ("unification" succeeds, nothing new is bound)                              
   if isVar(u) and u.name == '_' then return subst end
   
+  -- If u is a (free!) variable then bind y to it
   if isVar(u) then
     subst[u.name] = y
     return subst
+                                    
+  -- If it's a value, check if it's equal to y
   elseif u == y then
     return subst
+                                    
+  -- If they're both tables, check inside contents     
   elseif type(u) == 'table' and type(y) == 'table' then
+    -- Check array part
     if #u > 0 then
+      -- If their arrays don't have the same size, it fails to unify
       if #u ~= #y then return nil end
+      -- Check that elements at each index can be unified
+      --  while remembering the same variables (and constraint)
       for i, e in ipairs(u) do
         subst = unify_helper(e, y[i], subst, constraint)
         if not subst then return nil end
       end
     end
+                                    
+    -- Check hash part, make sure all elements at each key *of only u* can be unified                                
     for k, e in pairs(u) do
       local r = y[k]
-      if r == nil then return nil end--case has a key not in obj
+      -- Fails if case has a key not in obj                                  
+      if r == nil then 
+        return nil 
+      end 
+                               
       subst = unify_helper(e, r, subst, constraint)
       if not subst then return nil end
     end
+    
+    -- If nothing fails, passes, binding necessary inner-variables to values                                
     return subst
   end
+                                
+  -- If they aren't both tables and they're not equal, unification fails
 end
-local function unify(case, obj, constraint) --BECAREFUL!!! This unification works only in one direction!
+                            
+
+-- Attempts to unify the case and the obj(ect)
+-- Unification succeeds if the constraint holds AND: case == obj or case is a (free) variable or
+--  both are tables and the values at each key *of the case* can be unified, 
+--                  and if case has an array part, values at each indexes can be unified
+--                      (remembering all already-bound variables, given the same constraint)
+
+-- The constraint is called each time a unification attempt is made
+--  It is called with the two inputs and the substitution hash.
+--  It must always return true for unification to succeed
+local function unify(case, obj, constraint) --BECAREFUL!!! Unification is one-sided!
   return unify_helper(case, obj, {}, constraint)
 end
 
