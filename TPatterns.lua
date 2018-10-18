@@ -161,7 +161,7 @@ local caseMT = {getFunc =   function(self)
 -- Meta table for generating full cases
 local halfcaseMT = {__sub = function(self, expr) 
                               -- Syntatic sugars. case(...) - "{expr}" = case(...) - DO("{expr}", {})
-                              --  and case(...) - function() ??? end = case(...) - call(function() ??? end)
+                              --  and case(...) - function(hash) ??? end = case(...) - call(function(hash) ??? end)
                               if type(expr) == 'string' then return sm({self[1], DO(expr, {})}, caseMT) end
                               if type(expr) == 'function' then return sm({self[1], call(expr)}, caseMT) end
                               return sm({self[1], expr}, caseMT) 
