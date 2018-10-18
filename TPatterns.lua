@@ -1,7 +1,11 @@
 --[==[  ****THIS MODULE CURRENTLY SUPPORTS LUA 5.1 ONLY!
     A module that brings pattern matching from functional programming languages into Lua's tables.
-    This module relies heavily on (one-sided) unification. This file refers to a 'substitution hash'
-    which is just a table with keys being "variable" names and values as the values they represent.
+    This module relies heavily on (one-sided) unification. 
+
+    This file refers to a 'substitution hash' which is just a table with keys being "variable" names 
+    and values as the values they represent. If the value is nil, then it is a "free variable" and 
+    may later be bound to a more concrete value. The value can also be another variable, which will
+    usually be further looked up if it is bound.
     
     10 functions are exported: case, var, is_var, call, DO, 
                                 match, match_all, match_nomt, match_all_nomt and match_cond
@@ -71,8 +75,13 @@ local loadstring, type, assert, tostring = loadstring, type, assert, tostring
 local error, setfenv, unpack, select = error, setfenv, unpack, select
 local walk, isVar
 
+
+-- Generates a string that will assign values to (all) the variable(s) provided
+--  based on the substitution hash once loaded and ran as a function 
+--  with the hash as first argument
 local function declareVars(obj)
   if isVar(obj) then
+    -- the (...) argument refers to the subst hash
     return 'local '..obj.name..'='..'(...).'..obj.name..';'
   elseif type(obj) == 'table' then
     local accu = ''
@@ -85,21 +94,38 @@ local function declareVars(obj)
   end
 end
 
+-- Wraps a string to be load(string)ed and an environment
+--  for the resulting function to look up with
+--  NOTE: If env does not have a meta-table, it will be set to from_G
+--        Also, in the expression, access the subst hash with (...)
 local doMT = {}
 local function DO(str, env)
   return sm({str, env}, doMT)
 end
 
+-- Stores a function and the arguments to it, 
+-- which may be variables (to be looked up in the subst hash later)
+-- NOTE: Final parameter to 'f' is the substitution hash!
 local callMT = {}
 local function call(f, ...)
   return sm({func = f, args = {...}}, callMT)
 end
 
+-- meta-table for environments to declare that the global environment is used
 local from_G = {__index = _G}
+                                
+-- Meta-table for the completed case, something of the form case(...) - DO/call(...)
+-- getFunc returns a function that takes a substitution hash and evaulates the call/DO blocks
 local caseMT = {getFunc =   function(self)
-                local expr = self[2]
+                local expr = self[2] --extract rhs
+                                        
+                -- if rhs is a DO block                        
                 if gm(expr) == doMT then
+                  -- append the str expression with all variables being pre-bound 
+                  --   to their corresponding values inside the given hash (first arg.)
                   local header = declareVars(self[1])
+                  
+                  -- Generate the function with the given env
                   local f = loadstring( header .. 'return '..expr[1] )
                   local env = expr[2]
                   if gm(env) then
@@ -107,26 +133,41 @@ local caseMT = {getFunc =   function(self)
                   else
                     return setfenv(f, sm(env, from_G))
                   end
+                                            
+                -- if rhs is a call block
                 elseif gm(expr) == callMT then
+                    -- generate the (normal) function that takes the hash
                     return function(subst)
+                                                
+                      -- each variable is looked up in the hash before being passed
+                      --  to inner function
                       local accu = {}
                       for _, v in ipairs(expr.args) do
                         if isVar(v) then accu[#accu+1] = walk(v, subst)
                         else accu[#accu+1] = v
                         end
                       end
+                      -- final argument is subst hash
                       accu[#accu+1] = subst
+                                                
+                      -- eventually, call the inner, wrapped function with bound args and hash
                       return expr.func(unpack(accu))
                     end
                 else error("match> 'DO' or 'call' block expected.", 2)
                 end
               end
   } ; caseMT.__index = caseMT
+                                
+-- Meta table for generating full cases
 local halfcaseMT = {__sub = function(self, expr) 
+                              -- Syntatic sugars. case(...) - "{expr}" = case(...) - DO("{expr}", {})
+                              --  and case(...) - function() ??? end = case(...) - call(function() ??? end)
                               if type(expr) == 'string' then return sm({self[1], DO(expr, {})}, caseMT) end
                               if type(expr) == 'function' then return sm({self[1], call(expr)}, caseMT) end
                               return sm({self[1], expr}, caseMT) 
                             end}
+                                    
+-- Metatable for variables                                    
 local varMT = {__tostring = function(self) return '$('..self.name..')' end}
 
 -- [ FUNCTIONS ]
@@ -222,29 +263,49 @@ local function unify(case, obj, constraint) --BECAREFUL!!! Unification is one-si
 end
 
 
+-- Wraps obj with the halfcaseMT meta-table. Needs other half (right-side of '-') to be completed
+-- case(a1, a2, ...) is basically syntactic sugar for case({a1, a2, ...})
 local function case(obj, ...)
   return select('#', ...)==0 and sm({obj}, halfcaseMT) or sm({ {obj, ...} }, halfcaseMT)
 end
 
+-- USAGE: match_cond (constraint) (obj) (cases) where cases is an array of cases
+--      Alternatively: match_cond (constraint) (cases) (obj) where obj is an *empty* table or a non-table
+                                    
+-- match_cond (constraint) (o1, o2, o3, ...) (c1, c2, c3, ...) is
+--  syntatic sugar for match_cond (constraint) {o1, o2, o3, ...} {c1, c2, c3, ...}
 local function match_cond(constraint)
-  return function(a, ...) local x = (select('#', ...) == 0 and a) or {a, ...} ;
-  return function(b, ...) local y = (select('#', ...) == 0 and b) or {b, ...} ;
-    local obj, cases
-    assert(type(x) == 'table' or type(y) == 'table', 'match> an array of Cases must be given!')
-    if type(y) == 'table' and #y > 0 and gm(y[1]) == caseMT then obj = x; cases = y
-    else obj = y; cases = x
+  --stores first set of values
+  return function(a, ...) 
+    local x = (select('#', ...) == 0 and a) or {a, ...} ;
+    --stores second set of values
+    return function(b, ...) 
+      local y = (select('#', ...) == 0 and b) or {b, ...} ;
+      --check that cases is (probably) given and assign appropriate sets of values to obj/cases
+      local obj, cases
+      assert(type(x) == 'table' or type(y) == 'table', 'match> an array of Cases must be given!')
+      if type(y) == 'table' and #y > 0 and gm(y[1]) == caseMT then 
+        obj = x; cases = y
+      else 
+        obj = y; cases = x
+      end
+                                    
+      -- Attempt to unify (under constraint) each case based on index until it succeeds
+      --  Then, calls first succeeded case's function/expression with the substition hash
+      for _, c in ipairs(cases) do
+        local subst = unify(c[1], obj, constraint)
+        if subst then return (c:getFunc())(subst) end
+      end
     end
-    for _, c in ipairs(cases) do
-      local subst = unify(c[1], obj, constraint)
-      if subst then return (c:getFunc())(subst) end
-    end
-  end
   end
 end
 
+-- match_cond with no additional constraint on unification
 local match_nomt = match_cond(function() return true end)
 
 
+-- Check that all (sub-)tables have the same meta-table
+-- non-tables pass the constraint automatically
 local function checkMt(vals, vars)
   if type(vals) == 'table' and type(vars) == 'table' and not isVar(vars) then
     return gm(vals) == gm(vars)
@@ -252,13 +313,16 @@ local function checkMt(vals, vars)
     return true
   end
 end
-local match = match_cond(checkMt)
+local match = match_cond(checkMt) -- attempts to unify with checkMt constraint
 
+-- Counts the number of keys in a table
 local function size(t)
   local accu = 0
   for _, _ in pairs(t) do accu = accu + 1 end
   return accu
 end
+                                    
+-- Constraint that ensures all (sub-)tables have all the same keys                                    
 local function checkSize(vals, vars)
   if type(vals) == 'table' and type(vars) == 'table' and not isVar(vars) then
     return size(vals) == size(vars)
@@ -266,7 +330,11 @@ local function checkSize(vals, vars)
     return true
   end 
 end
-local match_all_nomt = match_cond(checkSize)
+
+-- Attempts unification but ensure all keys match                                    
+local match_all_nomt = match_cond(checkSize) 
+ 
+-- Attempts unification with all keys and meta-tables matching                                    
 local match_all = match_cond(function(x, y) return checkSize(x, y) and checkMt(x, y) end)
 
 
