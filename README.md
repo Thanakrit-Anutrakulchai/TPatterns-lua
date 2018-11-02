@@ -12,7 +12,9 @@
    
    ****THIS MODULE CURRENTLY SUPPORTS LUA 5.1 ONLY!
     A module that brings pattern matching from functional programming languages into Lua's tables.
-    This module relies heavily on (one-sided) unification. This file refers to a 'substitution hash'
+    This module relies heavily on (one-sided) unification. It is deeply inspired by the ideas of 
+    miniKanren and microKanren (http://minikanren.org/ & http://webyrd.net/scheme-2013/papers/HemannMuKanren2013.pdf)
+    This file refers to a 'substitution hash'
     which is just a table with keys being "variable" names and values as the values they represent.
     
     10 functions are exported: case, var, is_var, call, DO, 
