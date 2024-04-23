@@ -87,7 +87,7 @@ same as above, except it checks for all keys, like match_all.
 ```lua
     match_cond: match_cond (constraint) (obj) { case(c1) - call(fn, a1, s2) }
 ```
-This can be thought of as the `meat` of the module.
+This can be thought of as the meat of the module.
 Originally, match_cond wasn't going to be exported. However, its usefulness and
 flexibility, despite its awkward usage, was too good to pass up on.
 
@@ -159,7 +159,7 @@ in them, and returns true for values of any other type.
 ```
    -------------------------------------------------------------------------------------------------------------------------
 
-Fuurther examples may be found in 'tests.lua' and 'examples.lua'
+Fuurther examples may be found in 'tests/tests.lua' and 'examples.lua'
 
 NOTE: I realized too late that there was already a module that does something very similar 
 to this called tamale, by silentbicycle. There was no intent in copying his work,
