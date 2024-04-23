@@ -6,7 +6,7 @@ local match, match_all, match_cond = T.match, T.match_all, T.match_cond
 local match_nomt, match_all_nomt = T.match_nomt, T.match_all_nomt
 
 local mempty
-local List = { __tostring = function(self)  
+local List = { __tostring = function(self)
                               local accu = '[ '
                               while self ~= mempty do
                                 accu = accu..tostring(self.head)..', '
