@@ -132,3 +132,7 @@ test( 142,
 test( true,
   match {2, 4, 6, {8, 10}} { case{var'x', var'_', var'z', {var'_', var'_'}} - '_ == nil' }
 )
+
+test( true,
+  match (25) ( case (25) - 'true')
+)

@@ -299,10 +299,10 @@ local function match_cond(constraint)
   -- A matcher for pattern matching on an object
   ---@return PartiallyAppliedMatcher
   return function(a, ...)
-    local x = (select('#', ...) == 0 and a) or {a, ...} ;
+    local x = (select('#', ...) > 0 and {a, ...}) or (gm(a) == caseMT and {a}) or a
     -- A partially applied matcher
     return function(b, ...)
-      local y = (select('#', ...) == 0 and b) or {b, ...} ;
+      local y = (select('#', ...) > 0 and {b, ...}) or (gm(b) == caseMT and {b}) or b
       -- check that cases is (probably) given and assign appropriate sets of values to obj/cases
       local obj, cases
       assert(type(x) == 'table' or type(y) == 'table', 'match> An array of cases must be given!')
