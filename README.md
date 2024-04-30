@@ -60,8 +60,10 @@ Some things to note:
     * These equality checks happen when the values/variables in a case's keys 
       cannot be unified with the values of the corresponding keys in the object.
   * Positions of arguments don't matter e.g. match { cases } (obj) works provided obj isn't also a case block.
-  * match (o1, o2, ...) { cases } is "syntatic sugar" for match {o1, o2, ...}  { cases }
-        e.g. case{o1, o2, ...} will match, as well as case(o1, o2, ...).
+  * match (o1, o2, ...) { cases } is "syntatic sugar" for match {o1, o2, ...}  { cases }.
+      * e.g. case{o1, o2, ...} will match, as well as case(o1, o2, ...).
+      * Note that parsing ambiguity may arise when writing cases as multiple arguments on their own separate line.
+        
 
 Note: match will fail on a table if the array parts of a case and the object have different length.
 However, it will not fail if there are less keys in the *case* than in the *object*!
