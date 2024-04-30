@@ -61,8 +61,7 @@ Some things to note:
       cannot be unified with the values of the corresponding keys in the object.
   * Positions of arguments don't matter e.g. match { cases } (obj) works provided obj isn't also a case block.
   * match (o1, o2, ...) { cases } is "syntatic sugar" for match {o1, o2, ...}  { cases }
-        e.g. case{o1, o2, ...} will match, as well as case(o1, o2, ...)   
-        cases must still be in an array. ( case1, case2, ... ) will not work. TODO: doesn't it?
+        e.g. case{o1, o2, ...} will match, as well as case(o1, o2, ...).
 
 Note: match will fail on a table if the array parts of a case and the object have different length.
 However, it will not fail if there are less keys in the *case* than in the *object*!
