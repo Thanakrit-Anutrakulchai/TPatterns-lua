@@ -6,17 +6,17 @@ local function test(expected, got)
   assert(equal(expected, got), 'Expected '..tostring(expected)..'; Got '..tostring(got))
 end
 
-local Pair = {__eq = function(a, b) return (a.fst == b.fst) and (a.snd == b.snd) end}
+local PairMT = {__eq = function(a, b) return (a.fst == b.fst) and (a.snd == b.snd) end}
 local function pair(x, y)
-  return setmetatable({fst = x, snd = y}, Pair)
+  return setmetatable({fst = x, snd = y}, PairMT)
 end
 
-local Point = {__tostring = function(self)
+local PointMT = {__tostring = function(self)
     return table.concat{'Point','(', tostring(self.x), ', ', tostring(self.y), ')'}
   end
 }
 local function point(x, y)
-  return setmetatable({x = x, y = y}, Point)
+  return setmetatable({x = x, y = y}, PointMT)
 end
 
 local T = require 'TPatterns'
@@ -135,4 +135,53 @@ test( true,
 
 test( true,
   match (25) ( case (25) - 'true')
+)
+
+-- check how unification and __eq interact
+
+---@class Tagged
+---@field value any
+---@field metadata string
+
+local TaggedMT = {}
+function TaggedMT.__eq(self, other)
+  return self.value == other.value
+end
+local function Tagged(x, metadata)
+  return setmetatable({value = x, metadata = metadata}, TaggedMT)
+end
+
+test( true,
+  match (Tagged(5, "a message")) {
+    case(Tagged(5, "A different message")) - 'true',
+    case(Tagged(5, var'md')) - 'md'
+  }
+)
+
+test( "a message",
+  match (Tagged(5, "a message")) {
+    case(Tagged(5, var'md')) - 'md',
+    case(Tagged(5, "A different message")) - 'true'
+  }
+)
+
+-- check fields are accessible via __index metamethod
+local CountStringsMT = {}
+CountStringsMT.__index = function(self, key)
+  if key == "strings_count" then
+    local accu = 0
+    for _, v in pairs(self) do
+      if (type(v) == "string") then
+        accu = accu + 1
+      end
+    end
+    return accu
+  end
+end
+
+local strings_counted = setmetatable({ 2, 4, "a", "b", 5 }, CountStringsMT)
+test( 7,
+  match_nomt (strings_counted) {
+    case { 2, 4, var'_', var'_', var'f', strings_count = var's' } - 's + f'
+  }
 )

@@ -15,7 +15,7 @@
 local sm, gm, ipairs, pairs = setmetatable, getmetatable, ipairs, pairs
 local loadstring, type, assert = loadstring, type, assert
 local error, setfenv, unpack, select = error, setfenv, unpack, select
-local walk, isVar
+local walk, isVar, unify_helper, unify_table
 
 
 -- Generates a string that will assign values to (all) the variable(s) provided
@@ -201,12 +201,49 @@ function walk(v, subst)
 end
 
 
+-- Attempt to unify two tables structurally, i.e. without regards to __eq.
+---@param tvals table
+---@param tvars table<any, Variable>
+---@param subst SubstHash
+---@param constraint fun(v : Value, u : Value|Variable, s : SubstHash) : any
+---@return nil|SubstHash
+function unify_table(tvals, tvars, subst, constraint)
+  -- Check array part
+  if #tvars > 0 then
+    -- If their arrays don't have the same size, it fails to unify
+    if #tvars ~= #tvals then return nil end
+    -- Check that elements at each index can be unified
+    --  while remembering the same variables (and constraint)
+    for i, e in ipairs(tvars) do
+      local subst_or_nil = unify_helper(e, tvals[i], subst, constraint)
+      if not subst_or_nil then return nil end
+      subst = subst_or_nil
+    end
+  end
+
+  -- Check hash part, make sure all elements at each key *of only u* can be unified                                
+  for k, e in pairs(tvars) do
+    local r = tvals[k]
+    -- Fails if case has a key not in obj                                  
+    if r == nil then
+      return nil
+    end
+
+    local subst_or_nil = unify_helper(e, r, subst, constraint)
+    if not subst_or_nil then return nil end
+    subst = subst_or_nil
+  end
+
+  -- If nothing fails, passes, binding necessary inner-variables to values                                
+  return subst
+end
+
 -- Helper function for unification.
 ---@see unify
 ---@param subst SubstHash
 ---@param constraint fun(v : Value, u : Value|Variable, s : SubstHash) : any
 ---@return nil|SubstHash
-local function unify_helper(x, y, subst, constraint)
+function unify_helper(x, y, subst, constraint)
   assert(not isVar(y), 'match> There can only be variables in the cases!')
 
   -- Look up the value or free variable ultimately associated with x in subst
@@ -222,43 +259,20 @@ local function unify_helper(x, y, subst, constraint)
   if isVar(u) then
     subst[u.name] = y
     return subst
-
-  -- If it's a value, check if it's equal to y
-  elseif u == y then
-    return subst
-
-  -- If they're both tables, check inside contents     
-  elseif type(u) == 'table' and type(y) == 'table' then
-    -- Check array part
-    if #u > 0 then
-      -- If their arrays don't have the same size, it fails to unify
-      if #u ~= #y then return nil end
-      -- Check that elements at each index can be unified
-      --  while remembering the same variables (and constraint)
-      for i, e in ipairs(u) do
-        local subst_or_nil = unify_helper(e, y[i], subst, constraint)
-        if not subst_or_nil then return nil end
-        subst = subst_or_nil
-      end
-    end
-
-    -- Check hash part, make sure all elements at each key *of only u* can be unified                                
-    for k, e in pairs(u) do
-      local r = y[k]
-      -- Fails if case has a key not in obj                                  
-      if r == nil then
-        return nil
-      end
-
-      local subst_or_nil = unify_helper(e, r, subst, constraint)
-      if not subst_or_nil then return nil end
-      subst = subst_or_nil
-    end
-
-    -- If nothing fails, passes, binding necessary inner-variables to values                                
-    return subst
   end
 
+  -- If they're both tables, check inside contents     
+  local subst_or_nil
+  if type(u) == 'table' and type(y) == 'table' then
+    subst_or_nil = unify_table(y, u, subst, constraint)
+  end
+
+  if subst_or_nil then
+      return subst_or_nil
+  -- If unification failed or one side is not a table, check for equality
+  elseif y == u then
+      return subst
+  end
   -- If they aren't both tables and they're not equal, unification fails
 end
 

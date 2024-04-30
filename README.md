@@ -18,7 +18,7 @@ values of the variable.
 ```
 var('x') returns a variable named x. Used in matching.
 Note that if the variable is named '_', it can be used to match multiple different values,
-but it cannot be referred to from a Do/Call block (value will be nil)
+but it cannot be referred to from a Do/Call block (value will be nil).
 
 ```lua
   is_var: is_var(obj) = getmetatable(obj) == Var
@@ -54,9 +54,11 @@ Some things to note:
   * To access the hash in a DO block, use the varArgs (...) pattern.
   * If a1 and a2 are variables, their values (what they matched) will be passed. 
   * Modifying the hash with-in str or fn *shouldn't* affect the values (unless if it's a reference e.g. to a table).
-  TODO: check if __eq is actually ignored. Check how __index works with for
   * If obj has a metatable, the cases will not match if they have a different one (or none at all).
-      However, the metatable's __index field is ignored.
+  * The cases' metatable's __index fields are ignored.
+  * The object's __eq metamethod is used only to check for equality.
+    * These equality checks happen when the values/variables in a case's keys 
+      cannot be unified with the values of the corresponding keys in the object.
   * Positions of arguments don't matter e.g. match { cases } (obj) works provided obj isn't also a case block.
   * match (o1, o2, ...) { cases } is "syntatic sugar" for match {o1, o2, ...}  { cases }
         e.g. case{o1, o2, ...} will match, as well as case(o1, o2, ...)   
