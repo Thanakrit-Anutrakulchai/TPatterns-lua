@@ -19,6 +19,7 @@ values of the variable.
 var('x') returns a variable named x. Used in matching.
 Note that if the variable is named '_', it can be used to match multiple different values,
 but it cannot be referred to from a Do/Call block (value will be nil).
+Variable names must be valid Lua identifier names.
 
 ```lua
   is_var: is_var(obj) = getmetatable(obj) == Var
@@ -34,24 +35,27 @@ wraps an object (table, var, normal value) to be combined with a Call or Do obje
   call: call(fn, [...]) = setmetatable( {func = fn, args = {...}}, Call )
 ```
 wraps up a function and arguments passed to it to be combined with a Case object. Used in matching.
-when the function is called, a table storing the variable-value pairs gets passed as the final argument.
+When the function is called, a table, the substitution hash, gets passed as the final argument with the 
+variables as keys with their corresponding bound values, the i-th object given to match in the 
+i-th table entry, and an array of all matched objects as the 0th entry.
 
 ```lua
   DO:  DO(str, env) = setmetatable( {str, env}, Do )
 ```
 wraps up a string and an environment table to be passed to loadstring to generate a function.
 Combined with a Case object. Used in matching. If the table passed doesn't have a metatable, 
-its metatable gets set to {__index = _G}. str should be an expression.
+its metatable gets set to {__index = _G}. str should be an expression. Use varargs `(...)` to
+access the substitution hash from a DO block.
 
 ```lua
     match: match (obj) { case(c1) - DO(str, env), case(c2) - call(fn, a1, a2) } 
-            = loadstring(etc..'return '..str, setmetatable(env, {__index = _G}))(substitution hash)
+            = setfenv(loadstring(etc..'return '..str), 
+                      setmetatable(env, {__index = _G}))(substitution hash)
               OR fn(a1, a2, substitution hash)
 ```
 attempts to unify values in obj to values in c1, and then, if unsuccessful, on c2.
 This returns nil if neither c1 nor c2 matches. Most non-table values can also be matched on.
 Some things to note:
-  * To access the hash in a DO block, use the varArgs (...) pattern.
   * If a1 and a2 are variables, their values (what they matched) will be passed. 
   * Modifying the hash with-in str or fn *shouldn't* affect the values (unless if it's a reference e.g. to a table).
   * If obj has a metatable, the cases will not match if they have a different one (or none at all).
@@ -59,10 +63,14 @@ Some things to note:
   * The object's __eq metamethod is used only to check for equality.
     * These equality checks happen when the values/variables in a case's keys 
       cannot be unified with the values of the corresponding keys in the object.
+  * Any entry with a value of `nil` will be treated as if there is no entry. 
+    Use the numeric entries of the passed hash to access values that may be `nil`.
   * Positions of arguments don't matter e.g. match { cases } (obj) works provided obj isn't also a case block.
   * match (o1, o2, ...) { cases } is "syntatic sugar" for match {o1, o2, ...}  { cases }.
       * e.g. case{o1, o2, ...} will match, as well as case(o1, o2, ...).
       * Note that parsing ambiguity may arise when writing cases as multiple arguments on their own separate line.
+      * However, the i-th entries in the passed hash will be different. In the former case,
+        the 1st entry is o1, but in the latter, it is {o1, o2, ...}. See above section on call.
         
 
 Note: match will fail on a table if the array parts of a case and the object have different length.
@@ -121,6 +129,7 @@ in them, and returns true for values of any other type.
     local call, DO, match_nomt, match_all_nomt = T.call, T.DO, T.match_nomt, T.match_all_nomt
 
     -- ans == 12.
+    -- strings can be used as a shorthand for DO(str, {})
     local ans = match {2, 4, 6, 8} { case{2, var'x', 6, var'y'} - 'x+y', 
                                      case{1, 3, 5, var'z'} - 'z' }
 

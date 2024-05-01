@@ -301,12 +301,19 @@ local function case(obj, ...)
   return select('#', ...)==0 and sm({obj}, halfcaseMT) or sm({ {obj, ...} }, halfcaseMT)
 end
 
--- Usage: match\_cond (constraint) (obj) (cases) where cases is an array of cases.
--- Alternatively: match\_cond (constraint) (cases) (obj),
---   where obj is an *empty* table or a non-table.
+-- Usage: `match\_cond (constraint) (obj) (cases)` where cases is an array of cases.
+-- Alternatively: `match\_cond (constraint) (cases) (obj)`,
+--   where `obj` is an *empty* table or a non-table.
 --
--- match\_cond (constraint) (o1, o2, o3, ...) (c1, c2, c3, ...) is syntatic 
--- sugar for match\_cond (constraint) {o1, o2, o3, ...} {c1, c2, c3, ...}.
+-- `match\_cond (constraint) (o1, o2, o3, ...) (c1, c2, c3, ...)` is nearly 
+-- syntatic sugar for:
+-- ```
+--   match_cond (constraint) {o1, o2, o3, ...} {c1, c2, c3, ...}
+-- ```
+-- but with the former, the i-th index of `(...)` in a DO block or the final
+-- argument in a call block is the i-th object argument. With the latter,
+-- the 1st index is the entire table `{o1, ...}`, while the i-th index
+-- for `i>1` is `nil`. In either case, the 0th index is the entire table `{o1, ...}`.
 ---@param constraint fun(v : Value, u : Value|Variable, s : SubstHash) : any
 ---@return Matcher
 local function match_cond(constraint)
@@ -314,23 +321,35 @@ local function match_cond(constraint)
   ---@return PartiallyAppliedMatcher
   return function(a, ...)
     local x = (select('#', ...) > 0 and {a, ...}) or (gm(a) == caseMT and {a}) or a
+    local arg1 = {...} -- couldn't get it to work with `arg` and I'm not sure why?
     -- A partially applied matcher
     return function(b, ...)
       local y = (select('#', ...) > 0 and {b, ...}) or (gm(b) == caseMT and {b}) or b
       -- check that cases is (probably) given and assign appropriate sets of values to obj/cases
-      local obj, cases
+      local obj, cases, firstObj, restObj
       assert(type(x) == 'table' or type(y) == 'table', 'match> An array of cases must be given!')
       if type(y) == 'table' and #y > 0 and gm(y[1]) == caseMT then
-        obj = x; cases = y
+        obj = x; cases = y; firstObj = a; restObj = arg1
       else
-        obj = y; cases = x
+        obj = y; cases = x; firstObj = b; restObj = {...}
       end
 
       -- Attempt to unify (under constraint) each case based on index until it succeeds
-      --  Then, calls first succeeded case's function/expression with the substition hash
+      --  Then, calls first successful case's function/expression with the substition hash
       for _, c in ipairs(cases) do
         local subst = unify(c[1], obj, constraint)
-        if subst then return (c:getFunc())(subst) end
+        if subst then
+          -- add object arguments to substitution hash passed in
+          subst[0] = obj
+          -- using pairs instead of ipairs so passed nils do not hide keys
+          subst[1] = firstObj
+          if restObj then
+            for i, v in pairs(restObj) do
+              subst[i+1] = v
+            end
+          end
+          return (c:getFunc())(subst)
+        end
       end
     end
   end
@@ -352,7 +371,7 @@ end
 
 -- Counts the number of keys in a table.
 ---@param t table The table whose keys are counted
----@return integer
+---@return integer numKeys The number of keys according to `pairs`
 local function size(t)
   local accu = 0
   for _, _ in pairs(t) do accu = accu + 1 end

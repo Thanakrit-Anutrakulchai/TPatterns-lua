@@ -186,6 +186,39 @@ test( 7,
   }
 )
 
+-- check accessing matched objects
+test( 7,
+  match (2, 3, 4) {
+    case (var'x', 3, 4) - '(...)[2] + (...)[3]'
+  }
+)
+
+test( false,
+  match (case (var'x', false, var'y') - 'x and (...)[2]') (true, false, false)
+)
+
+test( {1, 2, 3},
+  match (case (var'z') - '(...)[0]') {1, 2, 3}
+)
+
+test( {'a', 'b', {'c', 'd'}},
+  match ('a', 'b', {'c', 'd'}) {
+    case (var'z') - function(t) return t[0] end
+  }
+)
+
+test( nil,
+  match {optional = nil, 1, 2, 3} {
+    case {1, 2, 3} - '(...)[0].optional'
+  }
+)
+
+test( 11,
+  match {optional = 11, 1, 2, 3} {
+    case {1, 2, 3} - '(...)[0].optional'
+  }
+)
+
 -- check passing multiple cases as argument
 
 test( true,
