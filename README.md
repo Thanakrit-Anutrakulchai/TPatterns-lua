@@ -37,7 +37,8 @@ wraps an object (table, var, normal value) to be combined with a Call or Do obje
 wraps up a function and arguments passed to it to be combined with a Case object. Used in matching.
 When the function is called, a table, the substitution hash, gets passed as the final argument with the 
 variables as keys with their corresponding bound values, the i-th object given to match in the 
-i-th table entry, and an array of all matched objects as the 0th entry.
+i-th table entry, and an array of all matched objects as the 0th entry —or just the singular object
+matched, if there is only one.
 
 ```lua
   DO:  DO(str, env) = setmetatable( {str, env}, Do )
@@ -73,10 +74,14 @@ Some things to note:
         the 1st entry is o1, but in the latter, it is {o1, o2, ...}. See above section on call.
         
 
-Note: match will fail on a table if the array parts of a case and the object have different length.
+Note: match will fail on a table if the array parts of a case and the object have different lengths.
 However, it will not fail if there are less keys in the *case* than in the *object*!
 Use match_all if all keys must match! 
 (This is so you don't have to match every single key in a complex object.)
+
+Also, Lua arrays (tables with consecutive integer indices) behave weirdly with `nil`s as intermediate entries.
+For example, per the official language reference, t = {1, nil, nil, 2, nil, 4} can have a length of
+`#t = 1, #t = 4, or #t = 6`. Caution is advised when matching against these arrays with intermediate `nil`s.
 
 ```lua
     match_all: match_all (obj) { case(c1) - str, case(c2) - function(hash) ... end }

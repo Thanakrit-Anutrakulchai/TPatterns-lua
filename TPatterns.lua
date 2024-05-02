@@ -209,16 +209,10 @@ end
 ---@return nil|SubstHash
 function unify_table(tvals, tvars, subst, constraint)
   -- Check array part
-  if #tvars > 0 then
-    -- If their arrays don't have the same size, it fails to unify
-    if #tvars ~= #tvals then return nil end
-    -- Check that elements at each index can be unified
-    --  while remembering the same variables (and constraint)
-    for i, e in ipairs(tvars) do
-      local subst_or_nil = unify_helper(e, tvals[i], subst, constraint)
-      if not subst_or_nil then return nil end
-      subst = subst_or_nil
-    end
+  -- If their arrays don't have the same size, it fails to unify
+  -- This is finicky because of how # works in Lua...
+  if #tvars > 0 and #tvars ~= #tvals then
+    return nil
   end
 
   -- Check hash part, make sure all elements at each key *of only u* can be unified                                
