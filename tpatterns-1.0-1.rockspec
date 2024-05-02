@@ -1,7 +1,7 @@
 package = "TPatterns"
 version = "1.0-1"
 source = {
-    url = "https://github.com/Thanakrit-Anutrakulchai/TPatterns-lua"
+    url = "git://github.com/Thanakrit-Anutrakulchai/TPatterns-lua"
 }
 description = {
     summary = "Pattern matching for tables",
