@@ -5,7 +5,7 @@
 
 A module that brings pattern matching (in the style of functional programming) to Lua's tables.
 This relies heavily on (one-sided) unification. It is deeply inspired by the ideas of 
-miniKanren and microKanren (http://minikanren.org/ & http://webyrd.net/scheme-2013/papers/HemannMuKanren2013.pdf)
+miniKanren and microKanren (http://minikanren.org/ & http://webyrd.net/scheme-2013/papers/HemannMuKanren2013.pdf).
 The 'substitution hash' referred to below is just a table with keys as variable names and table values as the 
 values of the variable.
 
